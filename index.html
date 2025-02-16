@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR.js Color Detection</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://rawgit.com/jeromeetienne/AR.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
+</head>
+<body style="margin: 0; overflow: hidden;">
+    <!-- AR.jsのシーン -->
+    <a-scene embedded arjs>
+        <!-- 色の判定結果を表示するテキスト -->
+        <a-text id="colorText" value="Detecting..." position="0 1 -2" scale="2 2 2"></a-text>
+        <!-- カメラ -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // カメラ映像を取得
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                let video = document.createElement('video');
+                video.srcObject = stream;
+                video.setAttribute("playsinline", true);
+                video.play();
+
+                let canvas = document.createElement('canvas');
+                let ctx = canvas.getContext('2d');
+
+                function detectColor() {
+                    if (!video.videoWidth) return;
+
+                    // カメラの映像をCanvasに描画
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // 中央のピクセルの色を取得
+                    let x = Math.floor(canvas.width / 2);
+                    let y = Math.floor(canvas.height / 2);
+                    let pixel = ctx.getImageData(x, y, 1, 1).data;
+                    let detectedColor = determineColor(pixel[0], pixel[1], pixel[2]);
+
+                    // AR.jsのテキストエンティティを更新
+                    document.querySelector("#colorText").setAttribute("value", "Color: " + detectedColor);
+
+                    requestAnimationFrame(detectColor);
+                }
+
+                // 色を判定する関数
+                function determineColor(r, g, b) {
+                    if (r > 150 && g < 100 && b < 100) return "Red";
+                    if (r < 100 && g > 150 && b < 100) return "Green";
+                    if (r < 100 && g < 100 && b > 150) return "Blue";
+                    if (r > 200 && g > 200 && b < 100) return "Yellow";
+                    if (r > 200 && g > 200 && b > 200) return "White";
+                    if (r < 50 && g < 50 && b < 50) return "Black";
+                    return "Unknown";
+                }
+
+                detectColor();
+            })
+            .catch(error => console.error("Camera access error:", error));
+    </script>
+</body>
+</html>
